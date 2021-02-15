@@ -26,6 +26,28 @@ public class ImageDisplay {
 		RGB_MODE, Y_CHANNEL, U_CHANNEL, V_CHANNEL;		
 	}
 
+	public enum Sample{
+		SAMPLE_Y, SAMPLE_U, SAMPLE_V;		
+	}
+	//Inner classes to represent YUV and RGB
+	class YUV {
+		double y, u, v;
+		public YUV(double y,double u, double v) {
+			this.y = y;
+			this.u = u;
+			this.v = v;
+		}
+	}
+	
+	class RGB {
+		int r, g, b;
+		public RGB(int r, int g, int b){
+			this.r = r;
+			this.g= g;
+			this.b = b;
+		}
+	}
+
 	/** Read Image RGB
 	 *  Reads the image of given width and height at the given imgPath into the provided BufferedImage.
 	 */
@@ -64,7 +86,12 @@ public class ImageDisplay {
 					ind++;
 
 					if(mode != Mode.RGB_MODE){
-						double[] yuvs = rgb2yuv(r, g, b);
+						//convert to unsigned int
+						int R = r & 0xFF;
+						int G = g & 0xFF;
+						int B = b & 0xFF;
+
+						double[] yuvs = rgb2yuv(R, G, B);
 						yChannel[y][x] = yuvs[0];
 						uChannel[y][x] = yuvs[1];
 						vChannel[y][x] = yuvs[2];
@@ -77,48 +104,60 @@ public class ImageDisplay {
 				//up-sampling yuv channels
 				for(int i = 0; i < height; i++) {
 					for(int j = 0; j < width; j++) {
+
+						// for(int xx = 0; xx < 3; xx++) {
+						// 	System.out.println(yChannel[xx][xx]);
+						// }
 						//4) Adjust up-sampling for display - 
 						//1:2:2, 2:3:3, 5:3:3....it can be anything - 352,352,352
 						if(inY !=0 && inU != 0 && inV != 0){
-							upSample(yChannel, inY, width, i, j, Mode.Y_CHANNEL);
-							upSample(uChannel, inU, width, i, j, Mode.Y_CHANNEL);
-							upSample(vChannel, inV, width, i, j, Mode.Y_CHANNEL);
+							yChannel = channelSample(yChannel, inY, width, i, j, Mode.Y_CHANNEL);
+							uChannel = channelSample(uChannel, inU, width, i, j, Mode.U_CHANNEL);
+							vChannel = channelSample(vChannel, inV, width, i, j, Mode.V_CHANNEL);
 						}
+						// for(int xx = 0; xx < 3; xx++) {
+						// 	System.out.println(yChannel[xx][xx]);
+						// }
 					}
 				}
 
-			boolean qFlag = true;
-			Integer[] bucket = null;
-			if(inQ <= 256){
-				double stepSize = 256/ (double) inQ;
-				System.out.println("slotsize ="+stepSize);
-				bucket = createBucketArray(stepSize);
-			}else{
-				qFlag = false;
-			}
-
-			//Display
-			for(int i = 0; i < height; i++) {
-				for(int j = 0; j < width; j++) {
-					
-					//5. Convert YUV to RGB
-					int[] arrRGB = yuv2rgb(yChannel[i][j], uChannel[i][j], vChannel[i][j]);
-					int R = arrRGB[0];
-					int G = arrRGB[1];
-					int B = arrRGB[2];	
-
-					//TODO: Quantization
-					if(qFlag) {
-						int[] quantizedRGB = quantize(R, G, B, bucket);
-						R = quantizedRGB[0];
-						G = quantizedRGB[1];
-						B = quantizedRGB[2];
-					}					
-					int processedPixel = 0xff000000 | ((R) << 16) | ((G) << 8) | (B);//0xff000000 | ((R & 0xff) << 16) | ((G & 0xff) << 8) | (B & 0xff);
-					img.setRGB(j, i, processedPixel);
-					// img.setRGB(i, j, processedPixel);
+				boolean qFlag = true;
+				Integer[] bucket = null;
+				if(inQ <= 256){
+					double stepSize = 256/ (double) inQ;
+					System.out.println("slotsize ="+stepSize);
+					bucket = createBucketArray(stepSize);
+				}else{
+					qFlag = false;
 				}
-			}
+
+				//Display
+				for(int i = 0; i < height; i++) {
+					for(int j = 0; j < width; j++) {
+						
+						//5. Convert YUV to RGB
+						int[] arrRGB = yuv2rgb(yChannel[i][j], uChannel[i][j], vChannel[i][j]);
+						int R = arrRGB[0];
+						int G = arrRGB[1];
+						int B = arrRGB[2];	
+
+						//System.out.println(R);
+						//System.out.println(G);
+						//System.out.println(B);
+
+						//TODO: Quantization
+						if( qFlag) {
+							int[] quantizedRGB = quantize(R, G, B, bucket);
+							R = quantizedRGB[0];
+							G = quantizedRGB[1];
+							B = quantizedRGB[2];
+						}					
+						// int processedPixel = 0xff000000 | ((R & 0xff) << 16) | ((G & 0xff) << 8) | (B & 0xff);
+						int processedPixel = 0xff000000 | ((R) << 16) | ((G) << 8) | (B);//0xff000000 | ((R & 0xff) << 16) | ((G & 0xff) << 8) | (B & 0xff);
+						img.setRGB(j, i, processedPixel);
+						// img.setRGB(i, j, processedPixel);
+					}
+				}
 
 			}
 		}
@@ -181,48 +220,38 @@ public class ImageDisplay {
 	//and up samples it into the same arrays
 	//u
 	
-	private void upSample(double[][] yuvChannel, int gap, int width, int i, int j, Mode mode) {
+	private double[][] channelSample(double[][] yuvChannel, int gap, int width, int i, int j, Mode mode) {
 
 		int k = j % gap;
 
+		//System.out.println(k);
 		if(k != 0) {
 			int prev = j-k;
 			int next = j+gap-k; 
+			//System.out.println(k);
 
 			if(next < width) {
 				double prevYUV = yuvChannel[i][prev];
 				double currentYUV = yuvChannel[i][j];
 				double nextYUV = yuvChannel[i][next];
-				
-				if(mode == Mode.Y_CHANNEL) {
-					//currentYUV = (prevYUV + nextYUV)/2;
-					currentYUV = ((gap - k)* prevYUV + (k * nextYUV))/gap;
-				}else if(mode == Mode.U_CHANNEL) {
-					//currentYUV = (prevYUV + nextYUV)/2;
-					currentYUV = ((gap - k)* prevYUV + (k * nextYUV))/gap;
-				}else if(mode == Mode.V_CHANNEL) {
-					//currentYUV = (prevYUV + nextYUV)/2;
-					currentYUV = ((gap - k)* prevYUV + (k * nextYUV))/gap;
-				}				
+				//System.out.println(next);
+				//System.out.println(width);
+				yuvChannel[i][j] = ((gap - k)* prevYUV + (k * nextYUV))/gap;		
 			} else {
 				//System.out.println("else-> prev = "+ prev + " next ="+next+" k="+k);
 				double prevYUV = yuvChannel[i][prev];
 
 				for(int m = prev+1; m < width; m++) {
-					double currentYUV = yuvChannel[i][m];
-					if(mode == Mode.Y_CHANNEL) {
-						currentYUV = prevYUV;
-					}else if(mode == Mode.U_CHANNEL) {
-						currentYUV = prevYUV;
-					}else if(mode == Mode.V_CHANNEL) {
-						currentYUV = prevYUV;
-					}
+				//System.out.println("x");
+					yuvChannel[i][m] = prevYUV;	
 				}
 			}
 
 		}
 
+		return yuvChannel;
 	}
+
 
 	public double[] rgb2yuv(int r, int g, int b) {
 		double[] yuv = new double[3];
@@ -283,27 +312,8 @@ public class ImageDisplay {
 	} 
 
 	//TODO try dividing method
-	public Integer[] createBucketArray3(double step) {
-		LinkedList<Integer> list = new LinkedList<Integer>();
-		double currentValue = 0;
-		int value = 0;
-
-		list.add(value);
-		while(true){
-			currentValue = currentValue + step;
-			value = (int) Math.round(currentValue);
-
-			if(value > 255){
-				break;
-			}
-			list.add(value);
-		}
-
-		Integer[] bucket = new Integer[list.size()];
-		bucket = list.toArray(bucket);
-
-		return bucket;
-	}
+	// public Integer[] createBucketArray3(double step) {
+	// }
 
  	public int[] quantize(int r, int g, int b, Integer[] bucket) {
 
