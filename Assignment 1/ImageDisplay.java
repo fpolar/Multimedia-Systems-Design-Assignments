@@ -21,14 +21,10 @@ public class ImageDisplay {
 	int inV;
 	int inQ;
 
-	public enum Mode{
-		RGB_MODE, Y_CHANNEL, U_CHANNEL, V_CHANNEL;		
-	}
-
 	/** Read Image RGB
 	 *  Reads the image of given width and height at the given imgPath into the provided BufferedImage.
 	 */
-	private void readImageRGB(int width, int height, String imgPath, BufferedImage img, Mode mode)
+	private void readImageRGB(int width, int height, String imgPath, BufferedImage img, boolean modFlag)
 	{
 		try
 		{
@@ -62,7 +58,7 @@ public class ImageDisplay {
 					img.setRGB(x,y,pix);
 					ind++;
 
-					if(mode != Mode.RGB_MODE){
+					if(modFlag){
 						int R = r & 0xFF;
 						int G = g & 0xFF;
 						int B = b & 0xFF;
@@ -74,25 +70,20 @@ public class ImageDisplay {
 					}
 				}
 			}
-			if(mode != Mode.RGB_MODE){
+			if(modFlag){
 
 				//up-sampling each yuv channel
 				for(int i = 0; i < height; i++) {
 					for(int j = 0; j < width; j++) {
 						if(inY !=0){
-							yChannel = channelSample(yChannel, inY, width, i, j, Mode.Y_CHANNEL);
+							yChannel = channelSample(yChannel, inY, width, i, j);
 						}
 						if(inU != 0){
-							uChannel = channelSample(uChannel, inU, width, i, j, Mode.U_CHANNEL);
+							uChannel = channelSample(uChannel, inU, width, i, j);
 						}
 						if(inV != 0){
-							vChannel = channelSample(vChannel, inV, width, i, j, Mode.V_CHANNEL);
+							vChannel = channelSample(vChannel, inV, width, i, j);
 						}
-						// if(inY !=0 && inU != 0 && inV != 0){
-						// 	yChannel = channelSample(yChannel, inY, width, i, j, Mode.Y_CHANNEL);
-						// 	uChannel = channelSample(uChannel, inU, width, i, j, Mode.U_CHANNEL);
-						// 	vChannel = channelSample(vChannel, inV, width, i, j, Mode.V_CHANNEL);
-						// }
 					}
 				}
 
@@ -123,7 +114,6 @@ public class ImageDisplay {
 						}					
 						// int processedPixel = 0xff000000 | ((R & 0xff) << 16) | ((G & 0xff) << 8) | (B & 0xff);
 						int processedPixel = 0xff000000 | ((R) << 16) | ((G) << 8) | (B);
-						// int processedPixel = 0xff000000 | ((R & 0xff) << 16) | ((G & 0xff) << 8) | (B & 0xff);
 						img.setRGB(j, i, processedPixel);
 						// img.setRGB(i, j, processedPixel);
 					}
@@ -153,8 +143,8 @@ public class ImageDisplay {
 		// Read in the specified image
 		imgOne = new BufferedImage(width, height, BufferedImage.TYPE_INT_RGB);
 		imgTwo = new BufferedImage(width, height, BufferedImage.TYPE_INT_RGB);
-		readImageRGB(width, height, args[0], imgOne, Mode.RGB_MODE);
-		readImageRGB(width, height, args[0], imgTwo, Mode.Y_CHANNEL);
+		readImageRGB(width, height, args[0], imgOne, false);
+		readImageRGB(width, height, args[0], imgTwo, true);
 
 		// Use label to display the image
 		frame = new JFrame();
@@ -187,7 +177,7 @@ public class ImageDisplay {
 
 	//Takes a Y U or V channel for an image as a 2D array 
 	//and up samples it into the same arrays and returns it
-	private double[][] channelSample(double[][] yuvChannel, int gap, int width, int i, int j, Mode mode) {
+	private double[][] channelSample(double[][] yuvChannel, int gap, int width, int i, int j) {
 
 		int k = j % gap;
 
@@ -233,7 +223,7 @@ public class ImageDisplay {
 		return rgb;
 	}
 
-	public Integer[] createBucketArray2(double step) {
+	public Integer[] createBucketArray(double step) {
 		LinkedList<Integer> list = new LinkedList<Integer>();
 		double currentValue = 0;
 
@@ -254,7 +244,7 @@ public class ImageDisplay {
 		for(int i=0; i < bucket.length-1; i++) {
 			if(r >= bucket[i] && r <= bucket[i+1]){				
 				int avg = (int) Math.round((bucket[i] + bucket[i+1])/(double)2);
-				if(r < mean){
+				if(r < avg){
 					r = bucket[i];
 				}else{
 					r = bucket[i+1];
@@ -264,7 +254,7 @@ public class ImageDisplay {
 
 			if(g >= bucket[i] && g <= bucket[i+1]){				
 				int avg = (int) Math.round((bucket[i] + bucket[i+1])/(double)2);
-				if(g < mean){
+				if(g < avg){
 					g = bucket[i];
 				}else{
 					g = bucket[i+1];
@@ -274,7 +264,7 @@ public class ImageDisplay {
 
 			if(b >= bucket[i] && b <= bucket[i+1]){				
 				int avg = (int) Math.round((bucket[i] + bucket[i+1])/(double)2);
-				if(b < mean){
+				if(b < avg){
 					b = bucket[i];
 				}else{
 					b = bucket[i+1];
