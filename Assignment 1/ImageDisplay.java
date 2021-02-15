@@ -76,7 +76,7 @@ public class ImageDisplay {
 			}
 			if(mode != Mode.RGB_MODE){
 
-				//up-sampling by yuv channels
+				//up-sampling each yuv channel
 				for(int i = 0; i < height; i++) {
 					for(int j = 0; j < width; j++) {
 						if(inY !=0){
@@ -96,7 +96,7 @@ public class ImageDisplay {
 					}
 				}
 
-				//doing setup for quantization
+				//init buckets befor quantization
 				boolean qFlag = true;
 				Integer[] bucket = null;
 				if(inQ <= 256){
@@ -233,29 +233,6 @@ public class ImageDisplay {
 		return rgb;
 	}
 
-	public Integer[] createBucketArray(double step) {
-		LinkedList<Integer> list = new LinkedList<Integer>();
-		double currentValue = 0;
-		int value = 0;
-
-		list.add(value);
-		while(true){
-			currentValue = currentValue + step;
-			value = (int) Math.round(currentValue);
-
-			if(value > 255){
-				break;
-			}
-			list.add(value);
-		}
-
-		Integer[] bucket = new Integer[list.size()];
-		bucket = list.toArray(bucket);
-
-		return bucket;
-	}
-
-	//TEST FOR ACCURACT VS 1
 	public Integer[] createBucketArray2(double step) {
 		LinkedList<Integer> list = new LinkedList<Integer>();
 		double currentValue = 0;
@@ -271,15 +248,12 @@ public class ImageDisplay {
 		return bucket;
 	} 
 
-	//TODO try dividing method
-	// public Integer[] createBucketArray3(double step) {
-	// }
-
+	//quantizes the 3 rgb values using an averaging strategy with the given bucket layout
  	public int[] quantize(int r, int g, int b, Integer[] bucket) {
 
 		for(int i=0; i < bucket.length-1; i++) {
 			if(r >= bucket[i] && r <= bucket[i+1]){				
-				int mean = (int) Math.round((bucket[i] + bucket[i+1])/(double)2);
+				int avg = (int) Math.round((bucket[i] + bucket[i+1])/(double)2);
 				if(r < mean){
 					r = bucket[i];
 				}else{
@@ -289,7 +263,7 @@ public class ImageDisplay {
 			}
 
 			if(g >= bucket[i] && g <= bucket[i+1]){				
-				int mean = (int) Math.round((bucket[i] + bucket[i+1])/(double)2);
+				int avg = (int) Math.round((bucket[i] + bucket[i+1])/(double)2);
 				if(g < mean){
 					g = bucket[i];
 				}else{
@@ -299,7 +273,7 @@ public class ImageDisplay {
 			}
 
 			if(b >= bucket[i] && b <= bucket[i+1]){				
-				int mean = (int) Math.round((bucket[i] + bucket[i+1])/(double)2);
+				int avg = (int) Math.round((bucket[i] + bucket[i+1])/(double)2);
 				if(b < mean){
 					b = bucket[i];
 				}else{
@@ -308,16 +282,20 @@ public class ImageDisplay {
 				break;
 			}
 		}
+
+		//clamping
 		if(r > 255){
 			r = 255;
 		}else if(r < 0){
 			r = 0;
 		}
+
 		if(g > 255){
 			g = 255;
 		}else if(g < 0){
 			g = 0;
 		}
+
 		if(b > 255){
 			b = 255;
 		}else if(b < 0){
