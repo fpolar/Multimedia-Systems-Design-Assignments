@@ -16,7 +16,6 @@ public class ImageDisplay {
 	int width = 352;
 	int height = 288;
 
-
 	int inY;
 	int inU;
 	int inV;
@@ -24,28 +23,6 @@ public class ImageDisplay {
 
 	public enum Mode{
 		RGB_MODE, Y_CHANNEL, U_CHANNEL, V_CHANNEL;		
-	}
-
-	public enum Sample{
-		SAMPLE_Y, SAMPLE_U, SAMPLE_V;		
-	}
-	//Inner classes to represent YUV and RGB
-	class YUV {
-		double y, u, v;
-		public YUV(double y,double u, double v) {
-			this.y = y;
-			this.u = u;
-			this.v = v;
-		}
-	}
-	
-	class RGB {
-		int r, g, b;
-		public RGB(int r, int g, int b){
-			this.r = r;
-			this.g= g;
-			this.b = b;
-		}
 	}
 
 	/** Read Image RGB
@@ -86,7 +63,6 @@ public class ImageDisplay {
 					ind++;
 
 					if(mode != Mode.RGB_MODE){
-						//convert to unsigned int
 						int R = r & 0xFF;
 						int G = g & 0xFF;
 						int B = b & 0xFF;
@@ -100,52 +76,45 @@ public class ImageDisplay {
 			}
 			if(mode != Mode.RGB_MODE){
 
-				//TODO change and understand
-				//up-sampling yuv channels
+				//up-sampling by yuv channels
 				for(int i = 0; i < height; i++) {
 					for(int j = 0; j < width; j++) {
-
-						// for(int xx = 0; xx < 3; xx++) {
-						// 	System.out.println(yChannel[xx][xx]);
-						// }
-						//4) Adjust up-sampling for display - 
-						//1:2:2, 2:3:3, 5:3:3....it can be anything - 352,352,352
-						if(inY !=0 && inU != 0 && inV != 0){
+						if(inY !=0){
 							yChannel = channelSample(yChannel, inY, width, i, j, Mode.Y_CHANNEL);
+						}
+						if(inU != 0){
 							uChannel = channelSample(uChannel, inU, width, i, j, Mode.U_CHANNEL);
+						}
+						if(inV != 0){
 							vChannel = channelSample(vChannel, inV, width, i, j, Mode.V_CHANNEL);
 						}
-						// for(int xx = 0; xx < 3; xx++) {
-						// 	System.out.println(yChannel[xx][xx]);
+						// if(inY !=0 && inU != 0 && inV != 0){
+						// 	yChannel = channelSample(yChannel, inY, width, i, j, Mode.Y_CHANNEL);
+						// 	uChannel = channelSample(uChannel, inU, width, i, j, Mode.U_CHANNEL);
+						// 	vChannel = channelSample(vChannel, inV, width, i, j, Mode.V_CHANNEL);
 						// }
 					}
 				}
 
+				//doing setup for quantization
 				boolean qFlag = true;
 				Integer[] bucket = null;
 				if(inQ <= 256){
 					double stepSize = 256/ (double) inQ;
-					System.out.println("slotsize ="+stepSize);
 					bucket = createBucketArray(stepSize);
 				}else{
 					qFlag = false;
 				}
 
-				//Display
+				//converting yuv to rgb, Quantization and writing image pixel by pixel
 				for(int i = 0; i < height; i++) {
 					for(int j = 0; j < width; j++) {
 						
-						//5. Convert YUV to RGB
-						int[] arrRGB = yuv2rgb(yChannel[i][j], uChannel[i][j], vChannel[i][j]);
-						int R = arrRGB[0];
-						int G = arrRGB[1];
-						int B = arrRGB[2];	
+						int[] convertedRGB = yuv2rgb(yChannel[i][j], uChannel[i][j], vChannel[i][j]);
+						int R = convertedRGB[0];
+						int G = convertedRGB[1];
+						int B = convertedRGB[2];
 
-						//System.out.println(R);
-						//System.out.println(G);
-						//System.out.println(B);
-
-						//TODO: Quantization
 						if( qFlag) {
 							int[] quantizedRGB = quantize(R, G, B, bucket);
 							R = quantizedRGB[0];
@@ -153,7 +122,8 @@ public class ImageDisplay {
 							B = quantizedRGB[2];
 						}					
 						// int processedPixel = 0xff000000 | ((R & 0xff) << 16) | ((G & 0xff) << 8) | (B & 0xff);
-						int processedPixel = 0xff000000 | ((R) << 16) | ((G) << 8) | (B);//0xff000000 | ((R & 0xff) << 16) | ((G & 0xff) << 8) | (B & 0xff);
+						int processedPixel = 0xff000000 | ((R) << 16) | ((G) << 8) | (B);
+						// int processedPixel = 0xff000000 | ((R & 0xff) << 16) | ((G & 0xff) << 8) | (B & 0xff);
 						img.setRGB(j, i, processedPixel);
 						// img.setRGB(i, j, processedPixel);
 					}
@@ -215,34 +185,24 @@ public class ImageDisplay {
 		frame.setVisible(true);
 	}
 
-	//TODO understand and modify, I think:
 	//Takes a Y U or V channel for an image as a 2D array 
-	//and up samples it into the same arrays
-	//u
-	
+	//and up samples it into the same arrays and returns it
 	private double[][] channelSample(double[][] yuvChannel, int gap, int width, int i, int j, Mode mode) {
 
 		int k = j % gap;
 
-		//System.out.println(k);
 		if(k != 0) {
 			int prev = j-k;
 			int next = j+gap-k; 
-			//System.out.println(k);
 
 			if(next < width) {
 				double prevYUV = yuvChannel[i][prev];
 				double currentYUV = yuvChannel[i][j];
 				double nextYUV = yuvChannel[i][next];
-				//System.out.println(next);
-				//System.out.println(width);
 				yuvChannel[i][j] = ((gap - k)* prevYUV + (k * nextYUV))/gap;		
 			} else {
-				//System.out.println("else-> prev = "+ prev + " next ="+next+" k="+k);
 				double prevYUV = yuvChannel[i][prev];
-
 				for(int m = prev+1; m < width; m++) {
-				//System.out.println("x");
 					yuvChannel[i][m] = prevYUV;	
 				}
 			}
