@@ -97,7 +97,6 @@ public class ImageDisplay {
 						R = (int)convertedRGBArr[0];
 						G = (int)convertedRGBArr[1];
 						B = (int)convertedRGBArr[2];
-						// System.out.println("Out " + hsvs[0] + " " + hsvs[1] + " " + hsvs[2] + " " + convertedRGB);
 						int convertedRGB = 0xff000000 | ((R) << 16) | ((G) << 8) | (B);
 						img.setRGB(x,y,convertedRGB);
 
@@ -165,7 +164,6 @@ public class ImageDisplay {
 		double[] rgbNormalized = new double[3];
 		double[] hsv = new double[3];
 
-
 		double rgbPeak = Math.max(r, Math.max(g, b));
 		double rgbValley = Math.min(r, Math.min(g, b));
 
@@ -176,10 +174,13 @@ public class ImageDisplay {
 			hsv[1] = 0;
 			return hsv;
 		}
+
+		//transforming rgb values based on the peaks and valleys
 		rgbNormalized[0] = (rgbPeak - r)/(rgbPeak-rgbValley);
 		rgbNormalized[1] = (rgbPeak - g)/(rgbPeak-rgbValley);
 		rgbNormalized[2] = (rgbPeak - b)/(rgbPeak-rgbValley);
 
+		//getting saturation and hue values
 		hsv[1] = (rgbPeak-rgbValley)/rgbPeak;
 
 		if(r == rgbPeak){
@@ -192,6 +193,8 @@ public class ImageDisplay {
 			hsv[0] = 4.0 + rgbNormalized[1] - rgbNormalized[0];
 		}
 		hsv[0] = (hsv[0]/6.0)%1.0;
+
+		//clamping hues
 		if(hsv[0]<0) hsv[0] = 0;
 		if(hsv[0]>359) hsv[0] = 359;
 
@@ -214,6 +217,8 @@ public class ImageDisplay {
 		double[] hsv = new double[3];
 		int i = (int)(h*6.0);
 		double delta = h*6.0 - i;
+
+		//cA-cC represent the 3 colors in rgb, the certain color is determined  by i because of hues cylindrical space
 		double cA = v*(1.0-s);
 		double cB = v*(1.0-s*delta);
 		double cC = v*(1.0-s*(1.0-delta));
