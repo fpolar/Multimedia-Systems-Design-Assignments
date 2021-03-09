@@ -19,8 +19,8 @@ public class ImageDisplay {
 	int width = 512;
 	int height = 512;
 
-	//java default RGB to HSB
-	boolean refFlag = true;
+	//java default RGB to HSB and vice versa for reference
+	boolean refFlag = false;
 
 	/** Read Image RGB
 	 *  Reads the image of given width and height at the given imgPath into the provided BufferedImage.
@@ -59,10 +59,11 @@ public class ImageDisplay {
 					img.setRGB(x,y,pix);
 					ind++;
 
+					int R = r & 0xFF;
+					int G = g & 0xFF;
+					int B = b & 0xFF;
+
 					if(refFlag){
-						int R = r & 0xFF;
-						int G = g & 0xFF;
-						int B = b & 0xFF;
 
 						//float to double scares me
 						float[] hsvs = Color.RGBtoHSB(R, G, B, null);
@@ -81,8 +82,22 @@ public class ImageDisplay {
 						vChannel[y][x] = (double)hsvs[2];
 
 						int convertedRGB = Color.HSBtoRGB(hsvs[0], hsvs[1], hsvs[2]);
+						System.out.println("Out " + hsvs[0] + " " + hsvs[1] + " " + hsvs[2] + " " + convertedRGB);
+						img.setRGB(x,y,convertedRGB);
+					}else{
+						float[] hsvsJAVA = Color.RGBtoHSB(R, G, B, null);
+						double[] hsvs = rgb2hsv(R, G, B);
+						if(hsvs[0] < h1){
+							hsvs[1] = 0;
+						}
+						if(hsvs[0] > h2){
+							hsvs[1] = 0;
+						}
+
+						int convertedRGB = Color.HSBtoRGB((float)hsvs[0], (float)hsvs[1], hsvsJAVA[2]);
 						// System.out.println("Out " + hsvs[0] + " " + hsvs[1] + " " + hsvs[2] + " " + convertedRGB);
 						img.setRGB(x,y,convertedRGB);
+
 					}
 				}
 			}
@@ -155,7 +170,7 @@ public class ImageDisplay {
 			for(int x = 0; x < 3; x++)
 			{
 				if(rgbPeak == rgbNormalized[x]){
-					System.out.println(x+" "+(x+1)%3+""+(x+2)%3);
+		//			System.out.println(x+" "+(x+1)%3+" "+(x+2)%3);
 					hsv[0] = (60 * (( rgbNormalized[(x+1)%3] - rgbNormalized[(x+2)%3] )/(rgbPeak-rgbValley)) +360)%360;
 					break;
 				}
@@ -170,7 +185,16 @@ public class ImageDisplay {
 
 		hsv[2] = rgbPeak * 100;
 
+		//System.out.println(hsv[0]+" "+hsv[1]+" "+hsv[2] );
 		return hsv;
+	}
+
+
+	public double[] hsv2rgb(int h, int s, int v) {
+		double[] rgb = new double[3];
+		double[] hsv = new double[3];
+
+		return rgb;
 	}
 
 	public static void main(String[] args) {
