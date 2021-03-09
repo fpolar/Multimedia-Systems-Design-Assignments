@@ -14,13 +14,10 @@ public class ImageDisplay {
 	JLabel lbIm2;
 	BufferedImage imgOne;
 	BufferedImage imgTwo;
-	// int width = 352;
-	// int height = 288;
 	int width = 512;
 	int height = 512;
 
-	//java default RGB to HSB and vice versa for reference
-	boolean refFlag = false;
+	//debug flag
 	boolean color_val_debug_flag = false;
 
 	/** Read Image RGB
@@ -56,7 +53,7 @@ public class ImageDisplay {
 					byte b = bytes[ind+height*width*2]; 
 
 					int pix = 0xff000000 | ((r & 0xff) << 16) | ((g & 0xff) << 8) | (b & 0xff);
-					//int pix = ((a << 24) + (r << 16) + (g << 8) + b);
+					
 					img.setRGB(x,y,pix);
 					ind++;
 
@@ -64,43 +61,20 @@ public class ImageDisplay {
 					int G = g & 0xFF;
 					int B = b & 0xFF;
 
-					if(refFlag){
-
-						//float to double scares me
-						float[] hsvs = Color.RGBtoHSB(R, G, B, null);
-						if(hsvs[0]*360 < h1){
-							// System.out.println("h1 thresh: " + hsvs[0]);
-							// hsvs[0] = 0;
-							hsvs[1] = 0;
-						}
-						if(hsvs[0]*360 > h2){
-							// System.out.println("h2 thresh: " + hsvs[0]);
-							// hsvs[0] = 0;
-							hsvs[1] = 0;
-						}
-
-						int convertedRGB = Color.HSBtoRGB(hsvs[0], hsvs[1], hsvs[2]);
-						//System.out.println("Out " + hsvs[0] + " " + hsvs[1] + " " + hsvs[2] + " " + convertedRGB);
-						img.setRGB(x,y,convertedRGB);
-					}else{
-						double[] hsvs = rgb2hsv(R, G, B);
-						if(hsvs[0] < h1){
-							//hsvs[0] = 0;
-							hsvs[1] = 0;
-						}
-						if(hsvs[0] > h2){
-							//hsvs[0] = 0;
-							hsvs[1] = 0;
-						}
-
-						double[] convertedRGBArr = hsv2rgb(hsvs[0], hsvs[1], hsvs[2]);
-						R = (int)convertedRGBArr[0];
-						G = (int)convertedRGBArr[1];
-						B = (int)convertedRGBArr[2];
-						int convertedRGB = 0xff000000 | ((R) << 16) | ((G) << 8) | (B);
-						img.setRGB(x,y,convertedRGB);
-
+					double[] hsvs = rgb2hsv(R, G, B);
+					if(hsvs[0] < h1){
+						hsvs[1] = 0;
 					}
+					if(hsvs[0] > h2){
+						hsvs[1] = 0;
+					}
+
+					double[] convertedRGBArr = hsv2rgb(hsvs[0], hsvs[1], hsvs[2]);
+					R = (int)convertedRGBArr[0];
+					G = (int)convertedRGBArr[1];
+					B = (int)convertedRGBArr[2];
+					int convertedRGB = 0xff000000 | ((R) << 16) | ((G) << 8) | (B);
+					img.setRGB(x,y,convertedRGB);
 				}
 			}
 		}
@@ -166,17 +140,18 @@ public class ImageDisplay {
 
 		double[] rgbNormalized = new double[3];
 		double[] hsv = new double[3];
-		
-		int rgbPeakInt = Math.max(r, Math.max(g, b));
 
 		double rD = r/255.0;
 		double gD = g/255.0;
 		double bD = b/255.0;
 
+		//Max and Mins for rgb values
+		//Int Max stored as well to avoid float comparisons
+		int rgbPeakInt = Math.max(r, Math.max(g, b));
 		double rgbPeak = Math.max(rD, Math.max(gD, bD));
 		double rgbValley = Math.min(rD, Math.min(gD, bD));
 
-		//s and v
+		//saturation and value
 		hsv[2] = rgbPeak;
 
 		if(rgbPeak==0){
@@ -202,7 +177,9 @@ public class ImageDisplay {
 		}
 		hsv[0]*=60;
 
-		// if(hsv[0]<0) hsv[0] = 0;
+		//clamping h
+		//red someimtes goes negative so clamp both sides to high end
+		//I noticed some red bleed at low h1 vals, possibly caused by this
 		if(hsv[0]>359 || hsv[0]<0) hsv[0] = 359;
 
 	    if(color_val_debug_flag){
