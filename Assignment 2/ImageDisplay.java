@@ -21,6 +21,7 @@ public class ImageDisplay {
 
 	//java default RGB to HSB and vice versa for reference
 	boolean refFlag = false;
+	boolean color_val_debug_flag = false;
 
 	/** Read Image RGB
 	 *  Reads the image of given width and height at the given imgPath into the provided BufferedImage.
@@ -77,25 +78,24 @@ public class ImageDisplay {
 							// hsvs[0] = 0;
 							hsvs[1] = 0;
 						}
-						hChannel[y][x] = (double)hsvs[0];
-						sChannel[y][x] = (double)hsvs[1];
-						vChannel[y][x] = (double)hsvs[2];
 
 						int convertedRGB = Color.HSBtoRGB(hsvs[0], hsvs[1], hsvs[2]);
-						System.out.println("Out " + hsvs[0] + " " + hsvs[1] + " " + hsvs[2] + " " + convertedRGB);
+						//System.out.println("Out " + hsvs[0] + " " + hsvs[1] + " " + hsvs[2] + " " + convertedRGB);
 						img.setRGB(x,y,convertedRGB);
 					}else{
-						float[] hsvsJAVA = Color.RGBtoHSB(R, G, B, null);
 						double[] hsvs = rgb2hsv(R, G, B);
-						if(hsvs[0] < h1){
+						if(hsvs[0]*360 < h1){
+							hsvs[0] = 0;
 							hsvs[1] = 0;
 						}
-						if(hsvs[0] > h2){
+						if(hsvs[0]*360 > h2){
+							hsvs[0] = 0;
 							hsvs[1] = 0;
 						}
 
-						int convertedRGB = Color.HSBtoRGB((float)hsvs[0], (float)hsvs[1], hsvsJAVA[2]);
+						double[] convertedRGBArr = hsv2rgb(hsvs[0], hsvs[1], hsvs[2]);
 						// System.out.println("Out " + hsvs[0] + " " + hsvs[1] + " " + hsvs[2] + " " + convertedRGB);
+						int convertedRGB = (((int)convertedRGBArr[0] << 16) + ((int)convertedRGBArr[1] << 8) + (int)convertedRGBArr[2]);
 						img.setRGB(x,y,convertedRGB);
 
 					}
@@ -155,26 +155,36 @@ public class ImageDisplay {
 	}
 
 	public double[] rgb2hsv(int r, int g, int b) {
+
+	    if(color_val_debug_flag){
+			System.out.println("RGB IN - "+r+" "+g+" "+b );
+		}
+
 		double[] rgbNormalized = new double[3];
 		double[] hsv = new double[3];
 
-		rgbNormalized[0] = r/255.0;
-		rgbNormalized[1] = g/255.0;
-		rgbNormalized[2] = b/255.0;
+		rgbNormalized[0] = r;///255.0;
+		rgbNormalized[1] = g;///255.0;
+		rgbNormalized[2] = b;///255.0;
 
 		double rgbPeak = Math.max(rgbNormalized[0], Math.max(rgbNormalized[1], rgbNormalized[2]));
 		double rgbValley = Math.min(rgbNormalized[0], Math.min(rgbNormalized[1], rgbNormalized[2]));
+
+		hsv[2] = rgbPeak;
 		if(rgbPeak == rgbValley){
 			hsv[0] = 0;
+			hsv[1] = 0;
 		}else{
-			for(int x = 0; x < 3; x++)
-			{
-				if(rgbPeak == rgbNormalized[x]){
-		//			System.out.println(x+" "+(x+1)%3+" "+(x+2)%3);
-					hsv[0] = (60 * (( rgbNormalized[(x+1)%3] - rgbNormalized[(x+2)%3] )/(rgbPeak-rgbValley)) +360)%360;
-					break;
-				}
+			if(r == rgbPeak){
+				hsv[0] = ((rgbPeak - rgbNormalized[2]) - (rgbPeak - rgbNormalized[1]))/(rgbPeak-rgbValley);
 			}
+			else if(g == rgbPeak){
+				hsv[0] = 2 + ((rgbPeak - rgbNormalized[0]) - (rgbPeak - rgbNormalized[2]))/(rgbPeak-rgbValley);
+			}
+			else{
+				hsv[0] = 4 + ((rgbPeak - rgbNormalized[1]) - (rgbPeak - rgbNormalized[0]))/(rgbPeak-rgbValley);
+			}
+			hsv[0] = (hsv[0]/6)%1.0;
 		}
 
 		if(rgbPeak == 0){
@@ -183,17 +193,56 @@ public class ImageDisplay {
 			hsv[1] = (rgbPeak-rgbValley)/rgbPeak;
 		}
 
-		hsv[2] = rgbPeak * 100;
-
-		//System.out.println(hsv[0]+" "+hsv[1]+" "+hsv[2] );
+	    if(color_val_debug_flag){
+			System.out.println("HSV OUT - "+hsv[0]+" "+hsv[1]+" "+hsv[2] );
+		}
 		return hsv;
 	}
 
 
-	public double[] hsv2rgb(int h, int s, int v) {
+	public double[] hsv2rgb(double h, double s, double v) {
+		if(s == 0){
+			double[] rgb = {v,v,v};
+			return rgb;
+		}
 		double[] rgb = new double[3];
 		double[] hsv = new double[3];
+		int i = (int)(h*6.0);
+		double delta = h*6 - i;
+		double cA = v*(1.0-s);
+		double cB = v*(1.0-s*delta);
+		double cC = v*(1.0-s*(1.0-delta));
+		i = i%6;
 
+	    if (i == 0){
+	    	rgb[0] = v;
+	    	rgb[1] = cC;
+	    	rgb[2] = cA;
+	    }else if (i == 1){
+	    	rgb[0] = cB;
+	    	rgb[1] = v;
+	    	rgb[2] = cA;
+	    }else if (i == 2){
+	    	rgb[0] = cA;
+	    	rgb[1] = v;
+	    	rgb[2] = cC;
+	    }else if (i == 3){
+	    	rgb[0] = cA;
+	    	rgb[1] = cB;
+	    	rgb[2] = v;
+	    }else if (i == 4){
+	    	rgb[0] = cC;
+	    	rgb[1] = cA;
+	    	rgb[2] = v;
+	    }else if (i == 5){
+	    	rgb[0] = v;
+	    	rgb[1] = cA;
+	    	rgb[2] = cB;
+	    }
+
+	    if(color_val_debug_flag){
+		    System.out.println("RGB OUT - "+rgb[0] + " " + rgb[1] + " " +rgb[2]);
+		}
 		return rgb;
 	}
 
