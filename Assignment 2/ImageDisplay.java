@@ -20,7 +20,7 @@ public class ImageDisplay {
 	int height = 512;
 
 	//java default RGB to HSB and vice versa for reference
-	boolean refFlag = true;
+	boolean refFlag = false;
 	boolean color_val_debug_flag = false;
 
 	/** Read Image RGB
@@ -84,14 +84,14 @@ public class ImageDisplay {
 						img.setRGB(x,y,convertedRGB);
 					}else{
 						double[] hsvs = rgb2hsv(R, G, B);
-						// if(hsvs[0] < h1){
-						// 	//hsvs[0] = 0;
-						// 	hsvs[1] = 0;
-						// }
-						// if(hsvs[0] > h2){
-						// 	//hsvs[0] = 0;
-						// 	hsvs[1] = 0;
-						// }
+						if(hsvs[0] < h1){
+							//hsvs[0] = 0;
+							hsvs[1] = 0;
+						}
+						if(hsvs[0] > h2){
+							//hsvs[0] = 0;
+							hsvs[1] = 0;
+						}
 
 						double[] convertedRGBArr = hsv2rgb(hsvs[0], hsvs[1], hsvs[2]);
 						R = (int)convertedRGBArr[0];
@@ -213,13 +213,7 @@ public class ImageDisplay {
 
 
 	public double[] hsv2rgb(double h, double s, double v) {
-		if(s == 0){
-			double[] rgb = {v,v,v};
-		    if(color_val_debug_flag){
-			    System.out.println("OUT RGB - "+v+"| in HSV "+h+" "+s+" "+v+" ");
-			}
-			return rgb;
-		}
+
 		double[] rgb = new double[3];
 		double[] hsv = new double[3];
 
