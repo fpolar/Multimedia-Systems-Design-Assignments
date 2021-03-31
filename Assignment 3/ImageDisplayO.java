@@ -61,18 +61,23 @@ public class ImageDisplay {
 			raf.read(bytes);
 
 			int ind = 0;
-			for(int y = 0; y < height; y++)
-			{
-				for(int x = 0; x < width; x++)
-				{
-					byte a = 0;
-					byte r = bytes[ind];
-					byte g = bytes[ind+height*width];
-					byte b = bytes[ind+height*width*2]; 
+			for(int i = 0; i < height; i++){
+				for(int j = 0; j < width; j++){
+					int r = bytes[ind];
+					int g = bytes[ind+height*width];
+					int b = bytes[ind+height*width*2]; 
+
+					r = r & 0xFF;
+					g = g & 0xFF;
+					b = b & 0xFF;
+
+					rChannel[i][j] = r;
+					gChannel[i][j] = g;
+					bChannel[i][j] = b;
 
 					int pix = 0xff000000 | ((r & 0xff) << 16) | ((g & 0xff) << 8) | (b & 0xff);
-					
-					imgOG.setRGB(x,y,pix);
+					//int pix = ((a << 24) + (r << 16) + (g << 8) + b);
+					imgOG.setRGB(j,i,pix);
 					ind++;
 				}
 			}
