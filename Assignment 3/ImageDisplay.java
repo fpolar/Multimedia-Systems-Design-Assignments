@@ -1,79 +1,63 @@
 package hw2;
 
+import java.awt.*;
+import java.awt.image.*;
+import java.io.*;
+import javax.swing.*;
+import java.util.*;
+import java.awt.Color;
 import static java.lang.Math.cos;
-
-import java.awt.GridBagConstraints;
-import java.awt.GridBagLayout;
-import java.awt.image.BufferedImage;
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileNotFoundException;
-import java.io.IOException;
-import java.io.InputStream;
-import java.util.Arrays;
-
-import javax.swing.ImageIcon;
-import javax.swing.JFrame;
-import javax.swing.JLabel;
-import javax.swing.SwingConstants;
 
 
 public class ImageDisplay {
-	JFrame frame = new JFrame();
-	GridBagLayout gLayout = new GridBagLayout();
-	JLabel lbText1 = new JLabel();
-	JLabel lbText2 = new JLabel();
-	JLabel lbIm1 = new JLabel();
-	JLabel lbIm2 = new JLabel();
-	int width = 512; 
+
+	JFrame frame;
+	JLabel lbIm1;
+	JLabel lbIm2;
+	JLabel lbIm3;
+	BufferedImage imgOG;
+	BufferedImage imgDCT;
+	BufferedImage imgDWT;
+	int width = 512;
 	int height = 512;
-	BufferedImage imgOG = new BufferedImage(width, height, BufferedImage.TYPE_INT_RGB);
-	BufferedImage imgDCT = new BufferedImage(width, height, BufferedImage.TYPE_INT_RGB);;
-	BufferedImage imgDWT = new BufferedImage(width, height, BufferedImage.TYPE_INT_RGB);;
 	
 	static double[][] cosMatrix = new double[8][8];
-	//Matrix for original R, G, B
 	int[][] rChannel = new int[height][width];
 	int[][] gChannel = new int[height][width];
 	int[][] bChannel = new int[height][width];
 
-	//Matrix for DCT of R, G, B
 	int[][] rChannelDCT = new int[height][width];
 	int[][] gChannelDCT = new int[height][width];
 	int[][] bChannelDCT = new int[height][width];
 
-	//Matrix for IDCT of R, G, B
 	int[][] rChannelIDCT = new int[height][width];
 	int[][] gChannelIDCT = new int[height][width];
 	int[][] bChannelIDCT = new int[height][width];
 
-	//Matrix for DWT of R, G, B
 	double[][] rChannelDWT = new double[height][width];
 	double[][] gChannelDWT = new double[height][width];
 	double[][] bChannelDWT = new double[height][width];
 
-	//Matrix for IDWT of R, G, B
 	int[][] rChannelIDWT = new int[height][width];
 	int[][] gChannelIDWT = new int[height][width];
 	int[][] bChannelIDWT = new int[height][width];
 
-	/**
-	 * Read original image and start DCt and DWT process as per algorithms
-	 */
 	public void showIms(String[] args) {		
 		
 		try {
+			int frameLength = width*height*3;
+
 			File file = new File(args[0]);
-			InputStream is = new FileInputStream(file);
+			RandomAccessFile raf = new RandomAccessFile(file, "r");
+			raf.seek(0);
 
-			long len = file.length();
-			byte[] bytes = new byte[(int)len];
+			long len = frameLength;
+			byte[] bytes = new byte[(int) len];
 
-			int offset = 0;
-			int numRead = 0;
-			while (offset < bytes.length && (numRead=is.read(bytes, offset, bytes.length-offset)) >= 0) {
-				offset += numRead;
-			}
+			raf.read(bytes);
+			imgOG = new BufferedImage(width, height, BufferedImage.TYPE_INT_RGB);
+			imgDCT = new BufferedImage(width, height, BufferedImage.TYPE_INT_RGB);
+			imgDWT = new BufferedImage(width, height, BufferedImage.TYPE_INT_RGB);
 
 			int ind = 0;
 			for(int i = 0; i < height; i++){
@@ -82,12 +66,10 @@ public class ImageDisplay {
 					int g = bytes[ind+height*width];
 					int b = bytes[ind+height*width*2]; 
 
-					//convert to unsigned int
 					r = r & 0xFF;
 					g = g & 0xFF;
 					b = b & 0xFF;
 
-					//Store the original R,G,B values
 					rChannel[i][j] = r;
 					gChannel[i][j] = g;
 					bChannel[i][j] = b;
@@ -199,32 +181,21 @@ public class ImageDisplay {
 				imgDWT.setRGB(j,i,pixx);					
 			}
 		}
-		
-		// Use labels to display the images
+
+		System.out.println("Displaying Original, DCT and DWT images, respectively");
+		frame = new JFrame();
+		GridBagLayout gLayout = new GridBagLayout();
 		frame.getContentPane().setLayout(gLayout);
 
-		lbText1.setText(iteration != 0 ? "DCT (Iteration : "+iteration+")" : "DCT");
-		lbText1.setHorizontalAlignment(SwingConstants.CENTER);
-		lbText2.setText(iteration != 0 ? "DWT (Iteration : "+iteration+")" : "DWT");
-		lbText2.setHorizontalAlignment(SwingConstants.CENTER);
-		lbIm1.setIcon(new ImageIcon(imgDCT));
-		lbIm2.setIcon(new ImageIcon(imgDWT));
+		lbIm1 = new JLabel(new ImageIcon(imgOG));
+		lbIm2 = new JLabel(new ImageIcon(imgDCT));
+		lbIm3 = new JLabel(new ImageIcon(imgDWT));
+
+		lbIm1.setIcon(new ImageIcon(imgOG));
+		lbIm2.setIcon(new ImageIcon(imgDCT));
+		lbIm3.setIcon(new ImageIcon(imgDWT));
 
 		GridBagConstraints c = new GridBagConstraints();
-		c.fill = GridBagConstraints.HORIZONTAL;
-		c.anchor = GridBagConstraints.CENTER;
-		c.weightx = 0.5;
-		c.gridx = 0;
-		c.gridy = 0;
-		frame.getContentPane().add(lbText1, c);
-
-		c.fill = GridBagConstraints.HORIZONTAL;
-		c.anchor = GridBagConstraints.CENTER;
-		c.weightx = 0.5;
-		c.gridx = 1;
-		c.gridy = 0;
-		frame.getContentPane().add(lbText2, c);
-
 		c.fill = GridBagConstraints.HORIZONTAL;
 		c.gridx = 0;
 		c.gridy = 1;
@@ -234,6 +205,11 @@ public class ImageDisplay {
 		c.gridx = 1;
 		c.gridy = 1;
 		frame.getContentPane().add(lbIm2, c);
+
+		c.fill = GridBagConstraints.HORIZONTAL;
+		c.gridx = 2;
+		c.gridy = 1;
+		frame.getContentPane().add(lbIm3, c);
 
 		frame.pack();
 		frame.setVisible(true);
